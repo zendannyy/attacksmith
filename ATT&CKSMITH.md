@@ -26,6 +26,8 @@ flowchart LR for ATT&CKSmith
   E --> G
   F --> G
 
+Better Image of the above 
+![Image of Design](/images/FlowChart.png)
 
 
 ```
