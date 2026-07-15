@@ -1,0 +1,112 @@
+# Collection tests — expected detection outcomes per scenario
+
+tests:
+  - id: detect_powershell_encoded
+    scenario_id: powershell_encoded_command
+    technique_id: T1059.001
+    description: Sigma rule should fire on encoded PowerShell execution
+    expected_rules:
+      - proc_creation_win_susp_powershell_encoded
+    min_alerts: 1
+
+  - id: detect_brute_force_new_asn
+    scenario_id: brute_force_auth
+    technique_id: T1110.001
+    description: >
+      Sigma rule should fire when failed logons originate from a new IP/ASN
+      (VPN, hostile ISP, infrastructure)
+    expected_rules:
+      - auth_failed_logon_bruteforce
+    min_alerts: 1
+
+  - id: known_asn_no_new_asn_alert
+    scenario_id: failed_logon_known_asn
+    technique_id: null
+    description: >
+      Repeated failures from the user's known ASN should not trigger new-ASN brute force rule
+    expected_rules: []
+    min_alerts: 0
+    must_not_match:
+      - auth_failed_logon_bruteforce
+
+  - id: detect_certutil_download
+    scenario_id: certutil_download
+    technique_id: T1105
+    description: Sigma rule should fire on certutil remote download
+    expected_rules:
+      - proc_creation_win_certutil_download
+    min_alerts: 1
+
+  - id: detect_lsass_dump
+    scenario_id: lsass_memory_dump
+    technique_id: T1003.001
+    description: Sigma rule should fire on LSASS memory dump attempt
+    expected_rules:
+      - proc_creation_win_lsass_dump_procdump
+    min_alerts: 1
+
+  - id: detect_scheduled_task_persistence
+    scenario_id: scheduled_task_persistence
+    technique_id: T1053.005
+    description: Sigma rule should fire on suspicious schtasks persistence
+    expected_rules:
+      - proc_creation_win_schtasks_persistence
+    min_alerts: 1
+
+  - id: detect_rdp_lateral_new_asn
+    scenario_id: rdp_lateral_new_asn
+    technique_id: T1021.001
+    description: Sigma rule should fire on RDP logon from new ASN
+    expected_rules:
+      - auth_success_rdp_new_asn
+    min_alerts: 1
+
+  - id: benign_no_alert
+    scenario_id: benign_process_start
+    technique_id: null
+    description: Benign activity should not trigger suspicious PowerShell rule
+    expected_rules: []
+    min_alerts: 0
+    must_not_match:
+      - proc_creation_win_susp_powershell_encoded
+
+  # --- Linux ---
+  - id: detect_ssh_tunneling_original
+    scenario_id: ssh_tunneling_via_ssh
+    technique_id: T1572
+    description: Original SSH -R tunneling example should trigger remote forward detection
+    expected_rules:
+      - lnx_audit_ssh_remote_forward
+    min_alerts: 1
+
+  - id: detect_ssh_remote_forward
+    scenario_id: ssh_remote_forward
+    technique_id: T1572
+    description: Sigma rule should fire on SSH remote port forwarding
+    expected_rules:
+      - lnx_audit_ssh_remote_forward
+    min_alerts: 1
+
+  - id: detect_ssh_bruteforce_new_asn
+    scenario_id: ssh_bruteforce_new_asn
+    technique_id: T1110.001
+    description: Sigma rule should fire on SSH failures from new ASN
+    expected_rules:
+      - lnx_auth_ssh_bruteforce_new_asn
+    min_alerts: 1
+
+  - id: detect_curl_pipe_bash
+    scenario_id: curl_pipe_to_bash
+    technique_id: T1105
+    description: Sigma rule should fire on curl piped to bash
+    expected_rules:
+      - lnx_audit_curl_pipe_bash
+    min_alerts: 1
+
+  - id: detect_crontab_persistence_shell
+    scenario_id: crontab_persistence
+    technique_id: T1053.003
+    description: Sigma rule should fire on suspicious cron drop-in
+    expected_rules:
+      - lnx_audit_crontab_persistence
+    min_alerts: 1
