@@ -1,7 +1,7 @@
 ATT&CKSMITH.mmd
-```mermaid
+```
 %% ATT&CKSMITH Component Mappings
-%% - Log/Signal Source: (TBD - external log sources)
+%% - Log/Signal Source: (external log sources, /scenarios)
 %% - Log Generator: (TBD - scripts generating sample logs)
 %% - Ingestion Pipeline: (TBD - log processing/normalization)
 %% - Alerting Engine w/ Sigma Rules: (TBD - Sigma rule evaluation)
