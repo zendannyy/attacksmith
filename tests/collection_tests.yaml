@@ -6,3 +6,20 @@ tests:
     expected_rules:
       - linux_cron_persistence_interactive_shell
     min_alerts: 1
+
+
+  - id: detect_ssh_remote_tunneling
+    scenario_id: ssh_tunneling_via_ssh
+    technique_id: T1572
+    description: SSH -R type tunneling example should trigger remote forward detection
+    expected_rules:
+      - linux_audit_ssh_remote_forward
+    min_alerts: 1
+
+  - id: detect_ssh_remote_forward
+    scenario_id: ssh_remote_forward
+    technique_id: T1572
+    description: Should fire on SSH remote port forwarding
+    expected_rules:
+      - linxu_audit_ssh_remote_forward
+    min_alerts: 1

