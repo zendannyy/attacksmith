@@ -9,7 +9,7 @@ tests:
 
 
   - id: detect_ssh_remote_tunneling
-    scenario_id: ssh_tunneling_via_ssh
+    scenario_id: ssh_remote_tunneling
     technique_id: T1572
     description: SSH -R type tunneling example should trigger remote forward detection
     expected_rules:

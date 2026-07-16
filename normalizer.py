@@ -8,7 +8,7 @@ from models import IngestedRecord, NormalizedEvent
 
 
 def normalize_linux_audit(record: IngestedRecord) -> NormalizedEvent:
-    """Map a decoded auditd process event into ATT&CKSmith fields."""
+    """Map a decoded auditd process event into ATT&CK fields."""
     payload = record.payload
     executable = str(payload.get("exe", ""))
     return NormalizedEvent(
