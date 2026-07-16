@@ -62,20 +62,81 @@ def generate_linux_audit_event(scenario: dict[str, Any]) -> RawLogRecord:
     )
 
 
-def generate(path: Path, scenario_id: str) -> list[RawLogRecord]:
-    """Generate all records for one named scenario."""
-    matches = [
-        scenario
-        for scenario in load_scenarios(path)
-        if scenario.get("id") == scenario_id
-    ]
-    if not matches:
-        raise ValueError(f"Unknown scenario '{scenario_id}'")
-    if len(matches) > 1:
-        raise ValueError(f"Duplicate scenario id '{scenario_id}'")
+def resolve_scenarios(
+    path: Path, selector: str
+) -> list[dict[str, Any]]:
+    """Resolve a user selector to one or more scenarios.
 
-    scenario = matches[0]
-    count = int(scenario.get("count", 1))
-    if count < 1:
-        raise ValueError("Scenario count must be at least 1")
-    return [generate_linux_audit_event(scenario) for _ in range(count)]
+    Accepts either:
+    - scenario ``id`` (exact match; preferred when present)
+    - ``technique_id`` (case-insensitive; may return multiple scenarios)
+    """
+    scenarios = load_scenarios(path)
+    if not selector or not selector.strip():
+        raise ValueError("Scenario selector cannot be empty")
+
+    selector = selector.strip()
+    by_id = [scenario for scenario in scenarios if scenario.get("id") == selector]
+    if by_id:
+        if len(by_id) > 1:
+            raise ValueError(f"Duplicate scenario id '{selector}'")
+        return by_id
+
+    selector_key = selector.casefold()
+    by_technique = [
+        scenario
+        for scenario in scenarios
+        if str(scenario.get("technique_id") or "").casefold() == selector_key
+    ]
+    if by_technique:
+        return by_technique
+
+    available_ids = sorted(
+        scenario["id"] for scenario in scenarios if scenario.get("id")
+    )
+    available_techniques = sorted(
+        {
+            str(scenario["technique_id"])
+            for scenario in scenarios
+            if scenario.get("technique_id")
+        }
+    )
+    raise ValueError(
+        f"Unknown scenario selector '{selector}'. "
+        f"Known ids: {', '.join(available_ids) or '(none)'}. "
+        f"Known technique_ids: {', '.join(available_techniques) or '(none)'}."
+    )
+
+
+def resolve_scenario_selectors(
+    path: Path, selectors: list[str]
+) -> list[dict[str, Any]]:
+    """Resolve one or more selectors and de-duplicate by scenario id."""
+    selected: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for selector in selectors:
+        for scenario in resolve_scenarios(path, selector):
+            scenario_id = scenario["id"]
+            if scenario_id in seen_ids:
+                continue
+            seen_ids.add(scenario_id)
+            selected.append(scenario)
+    return selected
+
+
+def generate_records(scenarios: list[dict[str, Any]]) -> list[RawLogRecord]:
+    """Generate raw records for already-resolved scenario definitions."""
+    records: list[RawLogRecord] = []
+    for scenario in scenarios:
+        count = int(scenario.get("count", 1))
+        if count < 1:
+            raise ValueError(
+                f"Scenario count must be at least 1 for '{scenario.get('id')}'"
+            )
+        records.extend(generate_linux_audit_event(scenario) for _ in range(count))
+    return records
+
+
+def generate(path: Path, selector: str) -> list[RawLogRecord]:
+    """Generate records for a scenario id or technique_id selector."""
+    return generate_records(resolve_scenarios(path, selector))
