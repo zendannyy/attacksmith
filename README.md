@@ -21,7 +21,7 @@ This aim is to solve the problem of "does this rule actually detect this threat?
 
 Given you have the logs for a scenario, test with `./run_collection_test.sh`
 For example, `./run_collection_test.sh --scenario T1053.003`
-[./run_collection_test.sh --scenario T1053.003](./images/running_attacksmith_scenario_id.png)
+![./run_collection_test.sh --scenario T1053.003](./images/running_attacksmith_scenario_id.png)
 The absence of any arguments will result in all tests by default, as indicated in the help messages. 
 
 If you don't you generate them with log_generator
