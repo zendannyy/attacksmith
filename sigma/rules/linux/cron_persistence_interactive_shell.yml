@@ -1,0 +1,26 @@
+title: Cron Persistence From Interactive Shell
+id: linux_cron_persistence_interactive_shell
+status: experimental
+description: Detects a shell writing a cron drop-in from an interactive terminal.
+logsource:
+  product: linux
+  service: auditd
+  category: process_creation
+detection:
+  selection_cron_path:
+    process.command_line|contains:
+      - /etc/cron.d/
+  selection_shell:
+    process.parent.name:
+      - bash
+      - zsh
+      - sh
+  selection_terminal:
+    process.tty|startswith:
+      - pts
+      - tty
+  condition: all of selection_*
+level: high
+tags:
+  - attack.persistence
+  - attack.t1053.003
