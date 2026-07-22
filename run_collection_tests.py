@@ -83,8 +83,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--json",
-        action="store_true",
-        help="Print full report as JSON",
+        action="store_true", help="Print full report as JSON",
     )
     args = parser.parse_args()
 
