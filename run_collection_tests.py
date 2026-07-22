@@ -1,4 +1,4 @@
-"""Run the ATT&CKSmith viability scenario end to end."""
+"""Run ATT&CKSmith collection tests end to end."""
 
 from __future__ import annotations
 
@@ -11,25 +11,33 @@ from alerting import load_rules
 from evaluator import evaluate as evaluate_tests
 from evaluator import load_tests
 from ingestor import ingest
-from log_generator import generate_records, resolve_scenario_selectors
+from log_generator import (
+    generate_records,
+    load_scenarios,
+    resolve_scenario_selectors,
+)
 from models import PipelineReport
 from normalizer import normalize
 
-DEFAULT_SCENARIO = "cron_persistence_interactive_shell"
 
 
 def run_pipeline(root: Path, selectors: str | list[str]) -> PipelineReport:
     """Execute one or more scenarios from generation through test evaluation.
-
+    If ``selectors`` is omitted, every scenario is run.
     Each selector may be a scenario ``id`` or a ``technique_id``.
     """
-    if isinstance(selectors, str):
-        selectors = [selectors]
-
     scenarios_path = root / "scenarios" / "linux.yaml"
-    selected = resolve_scenario_selectors(scenarios_path, selectors)
-    scenario_ids = {scenario["id"] for scenario in selected}
+    if selectors is None:
+        selected = load_scenarios(scenarios_path)
+    else:
+        if isinstance(selectors, str):
+            selectors = [selectors]
+        selected = resolve_scenario_selectors(scenarios_path, selectors)
 
+    if not selected:
+        raise ValueError("No scenarios selected")
+
+    scenario_ids = {scenario["id"] for scenario in selected}
     raw_records = generate_records(selected)
     ingested_records = ingest(raw_records)
     normalized_events = normalize(ingested_records)
@@ -58,28 +66,29 @@ def run_pipeline(root: Path, selectors: str | list[str]) -> PipelineReport:
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Run an ATT&CKSmith collection-test scenario. "
-            "Selectors accept scenario id or technique_id."
+            "Run ATT&CKSmith collection tests. "
+            "Omit --scenario to run all scenarios."
         )
     )
     parser.add_argument(
         "--scenario",
-        action="append", dest="scenarios", metavar="SELECTOR",
+        action="append",
+        dest="scenarios",
+        metavar="SELECTOR",
         help=(
             "Scenario id or technique_id to run; repeatable. "
+            "If omitted, all scenarios are run. "
             "Example: --scenario ssh_remote_forward or --scenario T1572"
         ),
     )
     parser.add_argument(
         "--json",
-        action="store_true", help="Print full report as JSON",
+        action="store_true",
+        help="Print full report as JSON",
     )
     args = parser.parse_args()
 
-    report = run_pipeline(
-        Path(__file__).resolve().parent,
-        args.scenarios or [DEFAULT_SCENARIO],
-    )
+    report = run_pipeline(Path(__file__).resolve().parent, args.scenarios)
     print(json.dumps(report.to_dict(), indent=2))
     return 0 if report.tests_failed == 0 else 1
 
