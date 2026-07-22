@@ -7,6 +7,14 @@ tests:
       - linux_cron_persistence_interactive_shell
     min_alerts: 1
 
+  # negative test: benign  
+  - id: benign_linux_cron_listing
+    scenario_id: benign_crontab_listing
+    expected_rules: []
+    min_alerts: 0
+    max_alerts: 0
+    must_not_match:
+    - linux_cron_persistence_interactive_shell
 
   - id: detect_ssh_remote_tunneling
     scenario_id: ssh_remote_tunneling
@@ -21,5 +29,5 @@ tests:
     technique_id: T1572
     description: Should fire on SSH remote port forwarding
     expected_rules:
-      - linxu_audit_ssh_remote_forward
+      - linux_audit_ssh_remote_forward
     min_alerts: 1

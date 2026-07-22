@@ -19,6 +19,23 @@ scenarios:
       bash -c 'echo "*/5 * * * * root /tmp/update.sh"
       > /etc/cron.d/system-update'
 
+
+  - id: benign_crontab_listing
+    name: Benign Cron listing from an interactive shell
+    description: An authenticated user lists crons.
+    technique_id: null
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: linux-workstation-01
+    user: user_01
+    user_id: 1000
+    audit_user_id: 1000
+    terminal: pts0
+    exe: /usr/bin/bash
+    parent_comm: bash
+    command_line: crontab -l
+  
   - id: ssh_remote_tunneling
     name: Tunneling via SSH remote forward
     description: >
