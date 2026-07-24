@@ -10,6 +10,10 @@ detection:
   selection_cron_path:
     process.command_line|contains:
       - /etc/cron.d/
+  selection_cron_write:
+    process.command_line|contains:
+      - "crontab -e"
+      - "tee "
   selection_shell:
     process.parent.name:
       - bash

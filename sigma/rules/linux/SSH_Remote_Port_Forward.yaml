@@ -1,0 +1,24 @@
+title: SSH Remote Port Forward
+id: linux_audit_ssh_remote_forward
+logsource:
+  product: linux
+  service: auditd
+  category: process_creation
+detection:
+  selection_ssh:
+    process.name: ssh
+  selection_forward:
+    process.command_line|contains:
+      - " -f"
+      - " -N"
+      - " -R "
+      - " -R"
+  selection_shell:
+    process.parent.name: [bash, zsh, sh]
+  selection_terminal:
+    process.tty|startswith: [pts, tty]
+  condition: all of selection_*
+level: high
+tags:
+- attack.command_and_control
+- attack.t1572
