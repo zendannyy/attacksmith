@@ -1,15 +1,19 @@
-"""Generate raw Linux audit events from ATT&CKSmith scenarios."""
+"""Generate raw Linux audit events from scenarios or Sigma rules."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from faker import Faker
 from pathlib import Path
 from typing import Any
 
 import yaml
 
+from alerting import SigmaRule
 from models import RawLogRecord
 
+
+fake = Faker()
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -60,6 +64,190 @@ def generate_linux_audit_event(scenario: dict[str, Any]) -> RawLogRecord:
         scenario_id=scenario["id"],
         technique_id=scenario.get("technique_id"),
     )
+
+
+def _as_list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else [value]
+
+
+def _first(value: Any, default: str = "") -> str:
+    items = _as_list(value)
+    if not items:
+        return default
+    return str(items[0])
+
+
+def technique_from_tags(tags: list[str]) -> str | None:
+    """Map Sigma ``attack.t1053.003`` tags to ``T1053.003``."""
+    for tag in tags:
+        lowered = str(tag).casefold()
+        if not lowered.startswith("attack.t"):
+            continue
+        token = str(tag).split(".", 1)[1]  # t1053.003
+        if token.lower().startswith("t") and len(token) > 1 and token[1].isdigit():
+            return token.upper()
+    return None
+
+
+def _selection_maps(rule: SigmaRule) -> list[dict[str, Any]]:
+    detection = rule.detection
+    condition = detection.get("condition", "selection")
+    selections = {
+        name: value
+        for name, value in detection.items()
+        if name != "condition" and isinstance(value, dict)
+    }
+    if condition == "selection":
+        selection = selections.get("selection")
+        return [selection] if selection else []
+    if condition == "all of selection_*":
+        return [
+            selection
+            for name, selection in selections.items()
+            if name.startswith("selection_")
+        ]
+    raise ValueError(
+        f"Cannot synthesize logs for unsupported condition "
+        f"'{condition}' in rule '{rule.id}'"
+    )
+
+
+def synthesize_scenario_from_rule(rule: SigmaRule) -> dict[str, Any]:
+    """Build a linux_audit scenario that should satisfy ``rule``.
+
+    Inverts the supported Sigma subset (exact / contains / startswith on
+    process fields) into exe, command_line, parent, and tty values.
+    """
+    process_name = "bash"
+    executable: str | None = None
+    command_parts: list[str] = []
+    parent_comm = "bash"
+    terminal = "pts0"
+
+    for selection in _selection_maps(rule):
+        for expression, expected in selection.items():
+            field, separator, operator = expression.partition("|")
+            operator = operator if separator else None
+
+            if field == "process.name":
+                process_name = _first(expected, process_name)
+            elif field == "process.executable":
+                executable = _first(expected)
+                process_name = Path(executable).name or process_name
+            elif field == "process.parent.name":
+                parent_comm = _first(expected, parent_comm)
+            elif field == "process.tty":
+                token = _first(expected, "pts")
+                terminal = token if operator != "startswith" else f"{token}0"
+            elif field == "process.command_line":
+                values = [str(item) for item in _as_list(expected)]
+                if operator == "contains":
+                    # Include every OR token so the cmdline is distinctive and
+                    # still satisfies ``any(token in cmdline)``.
+                    command_parts.extend(values)
+                elif operator == "startswith":
+                    command_parts.insert(0, values[0])
+                else:
+                    # Exact match: use the whole expected cmdline.
+                    command_parts = [values[0]]
+                    break
+
+    if executable is None:
+        executable = f"/usr/bin/{process_name}"
+
+    if command_parts:
+        # Prefer ``<name> <tokens>`` when name isn't already present.
+        joined = " ".join(command_parts)
+        if process_name and process_name.casefold() not in joined.casefold():
+            command_line = f"{process_name} {joined}"
+        else:
+            command_line = joined
+    else:
+        command_line = process_name
+
+    technique_id = technique_from_tags(rule.tags)
+    scenario_id = f"synth_{rule.id}"
+    return {
+        "id": scenario_id,
+        "name": f"Synthesized for {rule.id}",
+        "description": f"Auto-generated positive telemetry for rule {rule.id}",
+        "technique_id": technique_id,
+        "platform": "linux",
+        "log_source": "linux_audit",
+        "count": 1,
+        "host": "synth-host-01",
+        # "user": "bob",
+        "user": str(fake.name()),
+        "user_id": 1000,
+        "audit_user_id": 1000,
+        "terminal": terminal,
+        "exe": executable,
+        "parent_comm": parent_comm,
+        "command_line": command_line,
+        "source_rule_id": rule.id,
+        "expect": {
+            "id": f"detect_{rule.id}",
+            "rules": [rule.id],
+            "min_alerts": 1,
+            "description": f"Synthesized log should fire {rule.id}",
+        },
+    }
+
+
+def synthesize_scenarios_from_rules(
+    rules: list[SigmaRule],
+) -> list[dict[str, Any]]:
+    """Synthesize one positive scenario per Sigma rule."""
+    return [synthesize_scenario_from_rule(rule) for rule in rules]
+
+
+def resolve_rules(
+    rules: list[SigmaRule], selector: str
+) -> list[SigmaRule]:
+    """Resolve a selector to rules by id or ATT&CK technique tag."""
+    if not selector or not selector.strip():
+        raise ValueError("Rule selector cannot be empty")
+    selector = selector.strip()
+    by_id = [rule for rule in rules if rule.id == selector]
+    if by_id:
+        return by_id
+
+    technique = selector.upper()
+    if not technique.startswith("T"):
+        technique = f"T{technique}"
+    tag_suffix = technique.casefold()  # t1572
+    matched = [
+        rule
+        for rule in rules
+        if any(
+            str(tag).casefold() == f"attack.{tag_suffix}"
+            or str(tag).casefold().startswith(f"attack.{tag_suffix}")
+            for tag in rule.tags
+        )
+        or technique_from_tags(rule.tags) == technique
+    ]
+    if matched:
+        return matched
+
+    known = ", ".join(sorted(rule.id for rule in rules)) or "(none)"
+    raise ValueError(
+        f"Unknown rule selector '{selector}'. Known rule ids: {known}."
+    )
+
+
+def resolve_rule_selectors(
+    rules: list[SigmaRule], selectors: list[str]
+) -> list[SigmaRule]:
+    """Resolve one or more rule selectors and de-duplicate by rule id."""
+    selected: list[SigmaRule] = []
+    seen: set[str] = set()
+    for selector in selectors:
+        for rule in resolve_rules(rules, selector):
+            if rule.id in seen:
+                continue
+            seen.add(rule.id)
+            selected.append(rule)
+    return selected
 
 
 def resolve_scenarios(
@@ -135,6 +323,11 @@ def generate_records(scenarios: list[dict[str, Any]]) -> list[RawLogRecord]:
             )
         records.extend(generate_linux_audit_event(scenario) for _ in range(count))
     return records
+
+
+def generate_from_rules(rules: list[SigmaRule]) -> list[RawLogRecord]:
+    """Generate positive raw logs synthesized from Sigma rules."""
+    return generate_records(synthesize_scenarios_from_rules(rules))
 
 
 def generate(path: Path, selector: str) -> list[RawLogRecord]:
