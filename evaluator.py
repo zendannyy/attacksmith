@@ -10,8 +10,37 @@ import yaml
 from models import Alert, NormalizedEvent, TestCase, TestResult
 
 
+def tests_from_scenarios(scenarios: list[dict[str, Any]]) -> list[TestCase]:
+    """Build collection tests from each scenario's ``expect`` block."""
+    tests: list[TestCase] = []
+    for scenario in scenarios:
+        expect = scenario.get("expect")
+        if not isinstance(expect, dict):
+            continue
+        max_alerts_raw = expect.get("max_alerts")
+        max_alerts = None if max_alerts_raw is None else int(max_alerts_raw)
+        test = TestCase(
+            id=str(expect.get("id") or f"detect_{scenario['id']}"),
+            scenario_id=scenario["id"],
+            description=str(
+                expect.get("description")
+                or scenario.get("description")
+                or scenario.get("name")
+                or ""
+            ),
+            technique_id=scenario.get("technique_id"),
+            expected_rules=list(expect.get("rules") or expect.get("expected_rules") or []),
+            min_alerts=int(expect.get("min_alerts", 1)),
+            max_alerts=max_alerts,
+            must_not_match=list(expect.get("must_not_match") or []),
+        )
+        _validate_test_case(test)
+        tests.append(test)
+    return tests
+
+
 def load_tests(path: Path) -> list[TestCase]:
-    """Load collection tests from YAML."""
+    """Load collection tests from YAML (legacy registry)."""
     with path.open(encoding="utf-8") as stream:
         document = yaml.safe_load(stream) or {}
     items = document.get("tests", [])
@@ -29,7 +58,7 @@ def load_tests(path: Path) -> list[TestCase]:
             technique_id=item.get("technique_id"),
             expected_rules=item.get("expected_rules", []),
             min_alerts=int(item.get("min_alerts", 1)),
-            max_alerts=max_alerts,      #  optional and opt-in
+            max_alerts=max_alerts,
             must_not_match=item.get("must_not_match", []),
         )
         _validate_test_case(test)
