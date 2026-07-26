@@ -113,6 +113,8 @@ scenarios:
 
   # --- 5 additional Persistence / C2 cases ---
 
+  # tested log generation functionality by removing scenario yaml for 
+  # systemd_timer_persistence t1053.006
   - id: systemd_timer_persistence
     name: Systemd user timer persistence
     description: >
