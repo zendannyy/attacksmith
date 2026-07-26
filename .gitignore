@@ -4,4 +4,7 @@
 # Python
 __pycache__/
 *.pyc
-*env* 
+*env*
+
+# Cursor autonomous hook session state
+.cursor/hooks/state/ 
