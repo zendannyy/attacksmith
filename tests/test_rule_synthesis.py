@@ -36,6 +36,7 @@ class RuleSynthesisTest(unittest.TestCase):
         scenario = synthesize_scenario_from_rule(cron)
         self.assertEqual(scenario["source_rule_id"], cron.id)
         self.assertEqual(scenario["expect"]["rules"], [cron.id])
+        # test for "linux_cron_persistence_interactive_shell"
         self.assertIn("/etc/cron.d/", scenario["command_line"])
 
     def test_synthesized_log_matches_its_rule(self) -> None:
