@@ -4,16 +4,17 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from faker import Faker
+from faker import Faker
 from pathlib import Path
 from typing import Any
-
 import yaml
+from faker import Faker
 
 from alerting import SigmaRule
 from models import RawLogRecord
 
-
 fake = Faker()
+
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -72,19 +73,17 @@ def _as_list(value: Any) -> list[Any]:
 
 def _first(value: Any, default: str = "") -> str:
     items = _as_list(value)
-    if not items:
-        return default
-    return str(items[0])
+    return str(items[0]) if items else default
 
 
 def technique_from_tags(tags: list[str]) -> str | None:
     """Map Sigma ``attack.t1053.003`` tags to ``T1053.003``."""
     for tag in tags:
-        lowered = str(tag).casefold()
-        if not lowered.startswith("attack.t"):
+        text = str(tag)
+        if not text.casefold().startswith("attack.t"):
             continue
-        token = str(tag).split(".", 1)[1]  # t1053.003
-        if token.lower().startswith("t") and len(token) > 1 and token[1].isdigit():
+        token = text.split(".", 1)[1]  # t1053.003
+        if len(token) > 1 and token[0].lower() == "t" and token[1].isdigit():
             return token.upper()
     return None
 
@@ -155,29 +154,24 @@ def synthesize_scenario_from_rule(rule: SigmaRule) -> dict[str, Any]:
     if executable is None:
         executable = f"/usr/bin/{process_name}"
 
-    if command_parts:
-        # Prefer ``<name> <tokens>`` when name isn't already present.
-        joined = " ".join(command_parts)
-        if process_name and process_name.casefold() not in joined.casefold():
-            command_line = f"{process_name} {joined}"
-        else:
-            command_line = joined
-    else:
+    joined = " ".join(command_parts)
+    if not command_parts:
         command_line = process_name
+    elif process_name.casefold() not in joined.casefold():
+        command_line = f"{process_name} {joined}"
+    else:
+        command_line = joined
 
-    technique_id = technique_from_tags(rule.tags)
-    scenario_id = f"synth_{rule.id}"
     return {
-        "id": scenario_id,
+        "id": f"synth_{rule.id}",
         "name": f"Synthesized for {rule.id}",
         "description": f"Auto-generated positive telemetry for rule {rule.id}",
-        "technique_id": technique_id,
+        "technique_id": technique_from_tags(rule.tags),
         "platform": "linux",
         "log_source": "linux_audit",
         "count": 1,
         "host": "synth-host-01",
-        # "user": "bob",
-        "user": str(fake.name()),
+        "user": fake.user_name(),
         "user_id": 1000,
         "audit_user_id": 1000,
         "terminal": terminal,
@@ -215,16 +209,8 @@ def resolve_rules(
     technique = selector.upper()
     if not technique.startswith("T"):
         technique = f"T{technique}"
-    tag_suffix = technique.casefold()  # t1572
     matched = [
-        rule
-        for rule in rules
-        if any(
-            str(tag).casefold() == f"attack.{tag_suffix}"
-            or str(tag).casefold().startswith(f"attack.{tag_suffix}")
-            for tag in rule.tags
-        )
-        or technique_from_tags(rule.tags) == technique
+        rule for rule in rules if technique_from_tags(rule.tags) == technique
     ]
     if matched:
         return matched
