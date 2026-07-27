@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-
 import yaml
 
 from models import Alert, NormalizedEvent, TestCase, TestResult
+
+
+def _optional_int(value: Any) -> int | None:
+    return None if value is None else int(value)
 
 
 def tests_from_scenarios(scenarios: list[dict[str, Any]]) -> list[TestCase]:
@@ -17,8 +20,6 @@ def tests_from_scenarios(scenarios: list[dict[str, Any]]) -> list[TestCase]:
         expect = scenario.get("expect")
         if not isinstance(expect, dict):
             continue
-        max_alerts_raw = expect.get("max_alerts")
-        max_alerts = None if max_alerts_raw is None else int(max_alerts_raw)
         test = TestCase(
             id=str(expect.get("id") or f"detect_{scenario['id']}"),
             scenario_id=scenario["id"],
@@ -31,7 +32,7 @@ def tests_from_scenarios(scenarios: list[dict[str, Any]]) -> list[TestCase]:
             technique_id=scenario.get("technique_id"),
             expected_rules=list(expect.get("rules") or expect.get("expected_rules") or []),
             min_alerts=int(expect.get("min_alerts", 1)),
-            max_alerts=max_alerts,
+            max_alerts=_optional_int(expect.get("max_alerts")),
             must_not_match=list(expect.get("must_not_match") or []),
         )
         _validate_test_case(test)
@@ -49,8 +50,6 @@ def load_tests(path: Path) -> list[TestCase]:
 
     tests: list[TestCase] = []
     for item in items:
-        max_alerts_raw = item.get("max_alerts")
-        max_alerts = None if max_alerts_raw is None else int(max_alerts_raw)
         test = TestCase(
             id=item["id"],
             scenario_id=item["scenario_id"],
@@ -58,7 +57,7 @@ def load_tests(path: Path) -> list[TestCase]:
             technique_id=item.get("technique_id"),
             expected_rules=item.get("expected_rules", []),
             min_alerts=int(item.get("min_alerts", 1)),
-            max_alerts=max_alerts,
+            max_alerts=_optional_int(item.get("max_alerts")),
             must_not_match=item.get("must_not_match", []),
         )
         _validate_test_case(test)
@@ -69,14 +68,12 @@ def load_tests(path: Path) -> list[TestCase]:
 def _validate_test_case(test: TestCase) -> None:
     if test.min_alerts < 0:
         raise ValueError(f"min_alerts cannot be negative for test '{test.id}'")
-    if test.max_alerts is not None and test.max_alerts < 0:
+    if test.max_alerts is None:
+        return
+    if test.max_alerts < 0:
         raise ValueError(f"max_alerts cannot be negative for test '{test.id}'")
-    if (
-        test.max_alerts is not None
-        and test.min_alerts > test.max_alerts
-    ):
-        raise ValueError(
-            f"min_alerts ({test.min_alerts}) cannot exceed max_alerts "
+    if test.min_alerts > test.max_alerts:
+        raise ValueError(f"min_alerts ({test.min_alerts}) cannot exceed max_alerts "
             f"({test.max_alerts}) for test '{test.id}'"
         )
 
@@ -87,17 +84,15 @@ def evaluate(
     tests: list[TestCase],
 ) -> list[TestResult]:
     """Produce one pass/fail result for each collection test."""
-    event_by_id = {event.id: event for event in events}
     results: list[TestResult] = []
 
     for test in tests:
         scenario_events = [
             event for event in events if event.scenario_id == test.scenario_id
         ]
+        event_ids = {event.id for event in scenario_events}
         scenario_alerts = [
-            alert
-            for alert in alerts
-            if event_by_id.get(alert.event_id) in scenario_events
+            alert for alert in alerts if alert.event_id in event_ids
         ]
         alert_count = len(scenario_alerts)
         matched_rules = sorted({alert.rule_id for alert in scenario_alerts})
@@ -110,28 +105,18 @@ def evaluate(
         observed_techniques = {
             event.technique_id for event in scenario_events if event.technique_id
         }
-        technique_matches = (
-            test.technique_id is None or test.technique_id in observed_techniques
-        )
         within_max_alerts = (
             test.max_alerts is None or alert_count <= test.max_alerts
         )
-
+        technique_matches = (
+            test.technique_id is None or test.technique_id in observed_techniques
+        )
         passed = (
             alert_count >= test.min_alerts
             and within_max_alerts
             and not missing_rules
             and not forbidden_matches
             and technique_matches
-        )
-        message = _result_message(
-            passed=passed,
-            alert_count=alert_count,
-            test=test,
-            missing_rules=missing_rules,
-            forbidden_matches=forbidden_matches,
-            observed_techniques=observed_techniques,
-            within_max_alerts=within_max_alerts,
         )
         results.append(
             TestResult(
@@ -141,7 +126,15 @@ def evaluate(
                 matched_rules=matched_rules,
                 missing_rules=missing_rules,
                 forbidden_matches=forbidden_matches,
-                message=message,
+                message=_result_message(
+                    passed=passed,
+                    alert_count=alert_count,
+                    test=test,
+                    missing_rules=missing_rules,
+                    forbidden_matches=forbidden_matches,
+                    observed_techniques=observed_techniques,
+                    within_max_alerts=within_max_alerts,
+                ),
             )
         )
     return results
@@ -164,21 +157,8 @@ def _result_message(
     if missing_rules:
         return f"Missing expected rule(s): {', '.join(missing_rules)}"
     if not within_max_alerts:
-        return (
-            f"Expected at most {test.max_alerts} alert(s), got {alert_count}"
-        )
+        return f"Expected at most {test.max_alerts} alert(s), got {alert_count}"
     if test.technique_id and test.technique_id not in observed_techniques:
         observed = ", ".join(sorted(observed_techniques)) or "none"
         return f"Expected technique {test.technique_id}; observed {observed}"
     return f"Expected at least {test.min_alerts} alert(s), got {alert_count}"
-
-
-def summary(results: list[TestResult]) -> dict[str, Any]:
-    """Summarize collection-test outcomes."""
-    passed = sum(result.passed for result in results)
-    return {
-        "total": len(results),
-        "passed": passed,
-        "failed": len(results) - passed,
-        "all_passed": passed == len(results),
-    }
