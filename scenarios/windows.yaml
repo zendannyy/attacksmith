@@ -1,0 +1,64 @@
+scenarios:
+  - id: powershell_encoded_command
+    name: Encoded PowerShell execution
+    description: >
+      Attacker launches PowerShell with -EncodedCommand from cmd.exe to hide
+      the payload (Command and Scripting Interpreter - PowerShell).
+    technique_id: T1059.001
+    platform: windows
+    log_source: sysmon
+    count: 1
+    host: WORKSTATION-05
+    user: CORP\jsmith
+    process_name: powershell.exe
+    image_path: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+    parent_image: C:\Windows\System32\cmd.exe
+    command_line: >-
+      powershell.exe -NoP -W Hidden -EncodedCommand
+      SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkA
+    expect:
+      rules: [win_sysmon_powershell_encoded]
+      min_alerts: 1
+
+  - id: notepad_from_cmd
+    name: Notepad spawned from cmd.exe
+    description: >
+      True positive companion to benign_notepad_start — same Image
+      (notepad.exe), but ParentImage is cmd.exe instead of explorer.exe.
+    technique_id: T1036
+    platform: windows
+    log_source: sysmon
+    count: 1
+    host: WORKSTATION-05
+    user: CORP\jsmith
+    process_name: notepad.exe
+    image_path: C:\Windows\System32\notepad.exe
+    parent_image: C:\Windows\System32\cmd.exe
+    command_line: notepad.exe C:\Users\jsmith\AppData\Local\Temp\payload.txt
+    expect:
+      rules: [win_sysmon_notepad_cmd_parent]
+      min_alerts: 1
+
+  - id: benign_notepad_start
+    name: Benign notepad process start
+    description: >
+      Normal user opens notepad from Explorer; must not fire PowerShell or
+      notepad-from-cmd rules.
+    technique_id: null
+    platform: windows
+    log_source: sysmon
+    count: 1
+    host: WORKSTATION-05
+    user: CORP\jsmith
+    process_name: notepad.exe
+    image_path: C:\Windows\System32\notepad.exe
+    parent_image: C:\Windows\explorer.exe
+    command_line: notepad.exe C:\Users\jsmith\notes.txt
+    expect:
+      id: benign_notepad_no_suspicious_rules
+      rules: []
+      min_alerts: 0
+      max_alerts: 0
+      must_not_match:
+        - win_sysmon_powershell_encoded
+        - win_sysmon_notepad_cmd_parent
