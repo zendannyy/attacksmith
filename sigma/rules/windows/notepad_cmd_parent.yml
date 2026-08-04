@@ -1,0 +1,20 @@
+title: Suspicious Notepad Spawned by Command Shell
+id: win_sysmon_notepad_cmd_parent
+status: experimental
+description: >
+  Detects notepad.exe launched by cmd.exe. Benign notepad is normally started
+  by explorer.exe; a command-shell parent is a common living-off-the-land and
+  post-exploitation pattern (ATT&CK T1036 / defense evasion context).
+logsource:
+  product: windows
+  service: sysmon
+  category: process_creation
+detection:
+  selection:
+    process.name: notepad.exe
+    process.parent.name: cmd.exe
+  condition: selection
+level: medium
+tags:
+  - attack.defense_evasion
+  - attack.t1036
