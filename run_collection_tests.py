@@ -12,11 +12,14 @@ from evaluator import evaluate as evaluate_tests
 from evaluator import load_tests, tests_from_scenarios
 from ingestor import ingest
 from log_generator import (
+    default_scenario_paths,
     generate_records,
-    load_scenarios,
+    load_scenario_files,
     resolve_rule_selectors,
     resolve_scenario_selectors,
+    rule_product,
     synthesize_scenarios_from_rules,
+    SUPPORTED_SYNTH_PRODUCTS,
 )
 from models import PipelineReport, TestCase
 from normalizer import normalize
@@ -29,9 +32,12 @@ def _tests_for_scenarios(
     """Prefer scenario ``expect`` blocks; fall back to collection_tests.yaml."""
     from_expect = tests_from_scenarios(selected)
     covered = {test.scenario_id for test in from_expect}
+    legacy_path = root / "tests" / "collection_tests.yaml"
+    if not legacy_path.exists():
+        return from_expect
     legacy = [
         test
-        for test in load_tests(root / "tests" / "collection_tests.yaml")
+        for test in load_tests(legacy_path)
         if test.scenario_id in {scenario["id"] for scenario in selected}
         and test.scenario_id not in covered
     ]
@@ -80,10 +86,14 @@ def run_pipeline_from_rules(
     if rule_selectors:
         selected_rules = resolve_rule_selectors(all_rules, rule_selectors)
     else:
-        selected_rules = all_rules
+        # Default suite: only platforms we can synthesize today.
+        selected_rules = [
+            rule
+            for rule in all_rules
+            if rule_product(rule) in SUPPORTED_SYNTH_PRODUCTS
+        ]
 
     selected = synthesize_scenarios_from_rules(selected_rules)
-    # Evaluate only the selected rules so authoring stays rule-local.
     return _run_selected_scenarios(
         root,
         selected,
@@ -96,21 +106,21 @@ def run_pipeline(
     selectors: str | list[str] | None = None,
 ) -> PipelineReport:
     """Execute hand-authored scenarios from generation through evaluation."""
-    scenarios_path = root / "scenarios" / "linux.yaml"
+    scenario_paths = default_scenario_paths(root)
     if selectors is None:
-        selected = load_scenarios(scenarios_path)
+        selected = load_scenario_files(scenario_paths)
     else:
         if isinstance(selectors, str):
             selectors = [selectors]
-        selected = resolve_scenario_selectors(scenarios_path, selectors)
+        selected = resolve_scenario_selectors(scenario_paths, selectors)
     return _run_selected_scenarios(root, selected)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Run ATT&CKSmith tests. Default: synthesize logs from every Sigma "
-            "rule and grade that each rule fires (rule-only authoring)."
+            "Run ATT&CKSmith tests. Default: synthesize logs from Linux/Windows "
+            "Sigma rules and grade that each rule fires."
         )
     )
     parser.add_argument(
@@ -119,8 +129,8 @@ def main() -> int:
         dest="rules",
         metavar="SELECTOR",
         help=(
-            "Rule id or technique (e.g. linux_audit_socat_reverse_shell or "
-            "T1090). Default is all rules."
+            "Rule id or technique (e.g. win_sysmon_powershell_encoded or "
+            "T1059.001). Default is all synthesizable rules."
         ),
     )
     parser.add_argument(
@@ -129,8 +139,8 @@ def main() -> int:
         dest="scenarios",
         metavar="SELECTOR",
         help=(
-            "Optional hand-authored scenario id or technique_id. "
-            "When set, runs scenario mode instead of rule synthesis."
+            "Optional hand-authored scenario id or technique_id "
+            "(searches linux.yaml and windows.yaml)."
         ),
     )
     parser.add_argument(
