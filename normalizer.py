@@ -1,10 +1,14 @@
-"""Normalize collected Linux audit records into canonical events."""
+"""Normalize collected log records into canonical ATT&CKSmith events."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 from models import IngestedRecord, NormalizedEvent
+
+
+def _basename(path: str) -> str:
+    return path.replace("\\", "/").rsplit("/", 1)[-1].lower()
 
 
 def normalize_linux_audit(record: IngestedRecord) -> NormalizedEvent:
@@ -37,11 +41,47 @@ def normalize_linux_audit(record: IngestedRecord) -> NormalizedEvent:
     )
 
 
+def normalize_sysmon(record: IngestedRecord) -> NormalizedEvent:
+    """Map a Sysmon process-creation event into ATT&CK fields."""
+    payload = record.payload
+    image = str(payload.get("Image", ""))
+    parent = str(payload.get("ParentImage", ""))
+    return NormalizedEvent(
+        id=record.id,
+        timestamp=str(payload.get("UtcTime", record.ingested_at)),
+        log_source=record.source,
+        event_kind="process_creation",
+        scenario_id=record.scenario_id,
+        technique_id=record.technique_id,
+        fields={
+            "host.name": payload.get("Computer", ""),
+            "user.name": payload.get("User", ""),
+            "process.name": _basename(image),
+            "process.executable": image,
+            "process.command_line": payload.get("CommandLine", ""),
+            "process.parent.name": _basename(parent),
+            "process.parent.executable": parent,
+            "event.code": str(payload.get("EventID", "")),
+            "logsource.product": "windows",
+            "logsource.service": "sysmon",
+            "logsource.category": "process_creation",
+        },
+        tags=["windows", "sysmon", "process_creation"],
+    )
+
+
+HOOKS = {
+    "linux_audit": normalize_linux_audit,
+    "sysmon": normalize_sysmon,
+}
+
+
 def normalize(records: list[IngestedRecord]) -> list[NormalizedEvent]:
     """Normalize supported records and reject unknown sources."""
     events: list[NormalizedEvent] = []
     for record in records:
-        if record.source != "linux_audit":
+        hook = HOOKS.get(record.source)
+        if hook is None:
             raise ValueError(f"Unsupported log source '{record.source}'")
-        events.append(normalize_linux_audit(record))
+        events.append(hook(record))
     return events
