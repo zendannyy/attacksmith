@@ -6,7 +6,6 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-
 import yaml
 from faker import Faker
 
@@ -147,7 +146,7 @@ def technique_from_tags(tags: list[str]) -> str | None:
         text = str(tag)
         if not text.casefold().startswith("attack.t"):
             continue
-        token = text.split(".", 1)[1]
+        token = text.split(".", 1)[1]  # t1053.003
         if len(token) > 1 and token[0].lower() == "t" and token[1].isdigit():
             return token.upper()
     return None
@@ -155,7 +154,8 @@ def technique_from_tags(tags: list[str]) -> str | None:
 
 def rule_product(rule: SigmaRule) -> str:
     """Return the Sigma logsource product (lowercased), defaulting to linux."""
-    return str(rule.logsource.get("product") or "linux").casefold()
+    product = str(rule.logsource.get("product") or "linux").casefold()
+    return product
 
 
 def _selection_maps(rule: SigmaRule) -> list[dict[str, Any]]:
@@ -182,8 +182,7 @@ def _selection_maps(rule: SigmaRule) -> list[dict[str, Any]]:
 
 
 def _extract_process_constraints(
-    rule: SigmaRule,
-) -> tuple[str, str | None, list[str], str]:
+    rule: SigmaRule) -> tuple[str, str | None, list[str], str]:
     """Return process_name, executable, command_parts, parent_name."""
     process_name = "cmd.exe"
     executable: str | None = None
