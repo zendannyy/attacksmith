@@ -51,7 +51,8 @@ def load_scenario_files(paths: list[Path]) -> list[dict[str, Any]]:
 
 
 def default_scenario_paths(root: Path) -> list[Path]:
-    """Return standard scenario files under ``scenarios/``."""
+    """Return standard scenario files under ``scenarios/``.
+    chooses which ones, linux or windows"""
     return [
         root / "scenarios" / "linux.yaml",
         root / "scenarios" / "windows.yaml",
@@ -60,6 +61,12 @@ def default_scenario_paths(root: Path) -> list[Path]:
 
 def generate_linux_audit_event(scenario: dict[str, Any]) -> RawLogRecord:
     """Create one decoded auditd EXECVE-style record."""
+    # this was convoluted, not as clean as new approach
+    #   if scenario.get("log_source") != "linux_audit":
+    #     raise ValueError(
+    #         f"Unsupported log source for scenario '{scenario.get('id')}': "
+    #         f"{scenario.get('log_source')}"
+    #     )
     required = ("id", "command_line", "exe")
     missing = [key for key in required if not scenario.get(key)]
     if missing:
