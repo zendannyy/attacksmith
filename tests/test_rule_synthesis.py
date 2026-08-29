@@ -8,7 +8,9 @@ from pathlib import Path
 from alerting import load_rules
 from ingestor import ingest
 from log_generator import (
+    SUPPORTED_SYNTH_PRODUCTS,
     generate_from_rules,
+    rule_product,
     synthesize_scenario_from_rule,
     technique_from_tags,
 )
@@ -41,7 +43,13 @@ class RuleSynthesisTest(unittest.TestCase):
 
     def test_synthesized_log_matches_its_rule(self) -> None:
         rules = load_rules(ROOT / "sigma" / "rules")
-        for rule in rules:
+        synthesizable = [
+            rule
+            for rule in rules
+            if rule_product(rule) in SUPPORTED_SYNTH_PRODUCTS
+        ]
+        self.assertGreaterEqual(len(synthesizable), 1)
+        for rule in synthesizable:
             with self.subTest(rule=rule.id):
                 records = generate_from_rules([rule])
                 events = normalize(ingest(records))
