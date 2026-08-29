@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from evaluator import tests_from_scenarios
-from log_generator import load_scenarios
+from log_generator import default_scenario_paths, load_scenario_files, load_scenarios
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -27,7 +27,8 @@ class ScenarioExpectTest(unittest.TestCase):
             "bashrc_persistence",
             "ssh_dynamic_socks_forward",
             "ssh_proxycommand_tunnel",
-            "socat_reverse_shell",
+            "powershell_encoded_command",
+            "benign_notepad_start",
         }
         self.assertTrue(expected.issubset(ids))
 
