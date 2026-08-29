@@ -51,28 +51,24 @@ def load_scenario_files(paths: list[Path]) -> list[dict[str, Any]]:
 
 
 def default_scenario_paths(root: Path) -> list[Path]:
-    """Return standard scenario files under ``scenarios/``.
-    chooses which ones, linux or windows"""
+    """Return standard linux and windows scenario files under ``scenarios/``."""
     return [
         root / "scenarios" / "linux.yaml",
         root / "scenarios" / "windows.yaml",
     ]
 
 
-def generate_linux_audit_event(scenario: dict[str, Any]) -> RawLogRecord:
-    """Create one decoded auditd EXECVE-style record."""
-    # this was convoluted, not as clean as new approach
-    #   if scenario.get("log_source") != "linux_audit":
-    #     raise ValueError(
-    #         f"Unsupported log source for scenario '{scenario.get('id')}': "
-    #         f"{scenario.get('log_source')}"
-    #     )
-    required = ("id", "command_line", "exe")
+def _require_fields(scenario: dict[str, Any], required: tuple[str, ...]) -> None:
     missing = [key for key in required if not scenario.get(key)]
     if missing:
         raise ValueError(
             f"Scenario is missing required field(s): {', '.join(missing)}"
         )
+
+
+def generate_linux_audit_event(scenario: dict[str, Any]) -> RawLogRecord:
+    """Create one decoded auditd EXECVE-style record."""
+    _require_fields(scenario, ("id", "command_line", "exe"))
 
     payload = {
         "timestamp": _utc_now(),
@@ -98,12 +94,7 @@ def generate_linux_audit_event(scenario: dict[str, Any]) -> RawLogRecord:
 
 def generate_sysmon_event(scenario: dict[str, Any]) -> RawLogRecord:
     """Create one Sysmon Event ID 1 (process creation) record."""
-    required = ("id", "command_line")
-    missing = [key for key in required if not scenario.get(key)]
-    if missing:
-        raise ValueError(
-            f"Scenario is missing required field(s): {', '.join(missing)}"
-        )
+    _require_fields(scenario, ("id", "command_line"))
 
     process_name = scenario.get("process_name", "cmd.exe")
     image = scenario.get(
@@ -164,8 +155,7 @@ def technique_from_tags(tags: list[str]) -> str | None:
 
 def rule_product(rule: SigmaRule) -> str:
     """Return the Sigma logsource product (lowercased), defaulting to linux."""
-    product = str(rule.logsource.get("product") or "linux").casefold()
-    return product
+    return str(rule.logsource.get("product") or "linux").casefold()
 
 
 def _selection_maps(rule: SigmaRule) -> list[dict[str, Any]]:
@@ -291,10 +281,11 @@ def synthesize_windows_scenario_from_rule(rule: SigmaRule) -> dict[str, Any]:
     process_name, executable, command_parts, parent_name = (
         _extract_process_constraints(rule)
     )
-    if not process_name.lower().endswith(".exe"):
-        # Sysmon Image basenames are usually *.exe
-        if process_name in {"powershell", "pwsh", "cmd", "notepad"}:
-            process_name = f"{process_name}.exe"
+    if (
+        not process_name.lower().endswith(".exe")
+        and process_name in {"powershell", "pwsh", "cmd", "notepad"}
+    ):
+        process_name = f"{process_name}.exe"
     if executable is None:
         executable = f"C:\\Windows\\System32\\{process_name}"
     if not parent_name.lower().endswith(".exe"):
