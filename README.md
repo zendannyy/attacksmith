@@ -7,7 +7,7 @@ Below are more details on the main components that make up the project.
 models is the foundation to the rest of the project, the scaffolding. 
 It defines the data contracts every other component exchanges
 
-Key components
+Key components (all located at [attacksmith/models.py](./models.py))
 - RawLogRecord: generator output (source + opaque payload + ATT&CK metadata)
 - IngestedRecord: raw + ingestion metadata (id, ingested_at)
 - NormalizedEvent: canonical schema for Sigma (event_kind, fields, tags, dotted get())
@@ -24,4 +24,4 @@ For example, `./run_collection_test.sh --scenario T1053.003`
 ![./run_collection_test.sh --scenario T1053.003](./images/running_attacksmith_scenario_id.png)
 The absence of any arguments will result in all tests by default, as indicated in the help messages. 
 
-If you don't you generate them with log_generator
+If you don't have logs yet, you can generate them with log_generator
