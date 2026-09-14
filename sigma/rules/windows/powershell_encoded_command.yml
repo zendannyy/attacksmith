@@ -4,6 +4,9 @@ status: experimental
 description: >
   Detects PowerShell launched with an encoded command from an interactive
   parent shell (ATT&CK T1059.001).
+tags:
+  - attack.execution
+  - attack.t1059.001
 logsource:
   product: windows
   service: sysmon
@@ -24,7 +27,4 @@ detection:
       - powershell.exe
       - explorer.exe
   condition: all of selection_*
-level: high
-tags:
-  - attack.execution
-  - attack.t1059.001
+level: medium
