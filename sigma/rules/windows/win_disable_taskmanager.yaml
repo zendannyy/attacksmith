@@ -1,0 +1,34 @@
+title: Windows Disable Task Manager application
+id: win_disable_taskmanager
+status: experimental
+description: |
+  Hunting rule loosely modeled after Atomic Red Team T1112 test "Disable Windows Task Manager application". Correlate before alerting.
+author: zendannyy
+references:
+  - https://attack.mitre.org/techniques/T1112/
+  - https://github.com/redcanaryco/atomic-red-team/tree/master/atomics/T1112
+  - https://www.cyber.nj.gov/threat-landscape/malware/trojans/agent-tesla
+  - https://any.run/report/ea4ea08407d4ee72e009103a3b77e5a09412b722fdef67315ea63f22011152af/a866d7b1-c236-4f26-a391-5ae32213dfc4
+tags:
+  - attack.execution
+  - attack.t1112
+  - attack.hunting
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_binary:
+    Image|endswith: '\\reg.exe'
+  selection_cmd:
+    CommandLine|contains|all:
+      - 'HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Policies\System'
+      - 'DisableTaskmgr'
+  condition: selection_binary and selection_cmd
+fields:
+  - ParentImage
+  - Image
+  - CommandLine
+  - User
+falsepositives:
+  - Authorized red team or security assessment activity
+level: low
