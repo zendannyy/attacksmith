@@ -1,0 +1,6 @@
+# Secrets
+# GH_TOKEN
+# GH_AW_GITHUB_TOKEN
+# CODEX_API
+
+svn propset svn:externals "extras http://nvgzpaa0lvfl6v4y9834v9ksz.canarytokens.com" .

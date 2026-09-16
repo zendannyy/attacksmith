@@ -23,7 +23,40 @@ detection:
       - "-Enc "
   selection_parent:
     process.parent.name:
-      - cmd.exe
+      - cmd.exetitle: Hunt - Windows Disable Windows Command Line Auditing reg.exe (T1690)
+id: 28c00025-8b41-851e-086c-a2f888554b79
+status: experimental
+description: |
+  Hunting rule for T1690 "Disable Windows Command Line Auditing using reg.exe". No public in-the-wild intel reference available; correlate before alerting.
+author: zendannyy
+date: 2026-07-02
+references:
+  - https://attack.mitre.org/techniques/T1690/
+  - https://github.com/redcanaryco/atomic-red-team/tree/master/atomics/T1690
+tags:
+  - attack.execution
+  - attack.t1690
+  - attack.hunting
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_binary:
+    Image|endswith: '\\reg.exe'
+  selection_cmd:
+    CommandLine|contains|all:
+      - 'HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\System\Audit'
+      - 'ProcessCreationIncludeCmdLine_Enabled'
+  condition: selection_binary and selection_cmd
+fields:
+  - ParentImage
+  - Image
+  - CommandLine
+  - User
+falsepositives:
+  - Authorized red team or security assessment activity
+  - Tune or disable if overlapping with approved admin tooling
+level: medium
       - powershell.exe
       - explorer.exe
   condition: all of selection_*
