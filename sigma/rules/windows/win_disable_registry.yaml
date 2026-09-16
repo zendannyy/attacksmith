@@ -2,7 +2,7 @@ title: Windows Disable Registry Tool (T1112)
 id: win_disable_registry
 status: experimental
 description: |
-  Hunting rule based off of Atomic T1112 test "Disable Windows Registry Tool" (Modify Registry). Correlate with additional signals before alerting.
+  Hunting rule loosely based off of Atomic T1112 test "Disable Windows Registry Tool" (Modify Registry) and Agent Tesla reports. Correlate with additional signals before alerting.
 author: zendannyy
 references:
   - https://attack.mitre.org/techniques/T1112/
@@ -23,6 +23,7 @@ detection:
       - 'HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\policies\system'
       - 'Software\Microsoft\Windows\CurrentVersion\policies\system'
       - 'DisableRegistryTools /t REG_DWORD /d 1 '
+      - ' REG_DWORD /d 1 /f'
   condition: selection_binary and 1 of selection_cmd
 fields:
   - ParentImage
