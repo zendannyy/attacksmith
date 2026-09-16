@@ -25,3 +25,4 @@ For example, `./run_collection_test.sh --scenario T1053.003`
 The absence of any arguments will result in all tests by default, as indicated in the help messages. 
 
 If you don't have logs yet, you can generate them with log_generator
+
