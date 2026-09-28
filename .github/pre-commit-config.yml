@@ -1,0 +1,19 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-yaml      # Verifies YAML syntax
+      - id: check-json      # Verifies JSON syntax
+      - id: end-of-file-fixer # Ensures files end with a newline
+      - id: trailing-whitespace # Trims trailing spaces
+
+  - repo: local
+    hooks:
+      - id: sigma-cli
+        name: sigma-cli validate/convert
+        language: python
+        entry: sigma
+        additional_dependencies:
+          - sigma-cli==1.0.6
+        args: ["check"]
+        files: '\.(yml|yaml)$'
