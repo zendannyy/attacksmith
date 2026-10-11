@@ -16,4 +16,4 @@ repos:
         additional_dependencies:
           - sigma-cli==1.0.6
         args: ["check"]
-        files: '\.(yml|yaml)$'
+        files: '^sigma/rules/.*\.(yml|yaml)$'
