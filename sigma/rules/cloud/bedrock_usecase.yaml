@@ -2,12 +2,13 @@ title: AWS Bedrock Foundation Model Access with Long-Lived Keys
 id: cloudtrail_bedrock_longlived_key
 status: experimental
 description: >
-  Detects Bedrock foundation-model availability, use-case API calls authenticated with a long-lived IAM access key
+  Detects Bedrock foundation-model availability, use-case of API calls authenticated with a long-lived IAM access key
   (AKIA*).
 author: ATT&CKSMITH
 date: 2026/07/27
 references:
   - https://docs.aws.amazon.com/bedrock/latest/APIReference/API_Operations.html
+  - https://docs.aws.amazon.com/IAM/latest/UserGuide/security-creds-programmatic-access.html
 logsource:
   product: aws
   service: cloudtrail
@@ -25,4 +26,3 @@ level: medium
 tags:
   - attack.discovery
   - attack.t1526
-
