@@ -1,5 +1,5 @@
 title: AWS Bedrock Foundation Model Access with Long-Lived Keys
-id: cloudtrail_bedrock_longlived_key
+id: 7c2e1a4b-9d3f-4c8a-b1e0-2f6a8d4c9e11
 status: experimental
 description: >
   Detects Bedrock foundation-model availability, use-case of API calls authenticated with a long-lived IAM access key
