@@ -113,7 +113,7 @@ scenarios:
 
   # --- 5 additional Persistence / C2 cases ---
 
-  # tested log generation functionality by removing scenario yaml for 
+  # tested log generation functionality by removing scenario yaml for
   # systemd_timer_persistence t1053.006
   - id: systemd_timer_persistence
     name: Systemd user timer persistence
@@ -204,4 +204,246 @@ scenarios:
       rules: [linux_audit_ssh_proxy_tunnel]
       min_alerts: 1
 
- 
+  # --- Privilege Escalation ---
+
+  - id: sudo_interactive_root_shell
+    name: Sudo interactive root shell
+    description: >
+      From an interactive shell, the operator escalates to root with sudo -i
+      (Abuse Elevation Control Mechanism: Sudo and Sudo Caching).
+    technique_id: T1548.003
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: linux-workstation-01
+    user: attacker
+    user_id: 1000
+    audit_user_id: 1000
+    terminal: pts0
+    exe: /usr/bin/sudo
+    parent_comm: bash
+    command_line: sudo -i
+    expect:
+      rules: [linux_audit_sudo_privesc]
+      min_alerts: 1
+
+  - id: sudo_su_root
+    name: Sudo su to root
+    description: >
+      Interactive sudo su - to spawn a root login shell after a low-priv
+      foothold.
+    technique_id: T1548.003
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: linux-workstation-01
+    user: attacker
+    user_id: 1000
+    audit_user_id: 1000
+    terminal: pts0
+    exe: /usr/bin/sudo
+    parent_comm: bash
+    command_line: sudo su -
+    expect:
+      rules: [linux_audit_sudo_privesc]
+      min_alerts: 1
+
+  - id: chmod_suid_binary
+    name: Setuid bit on a world-writable binary
+    description: >
+      Attacker marks a dropped binary setuid root so later execution runs as
+      the file owner (Setuid and Setgid).
+    technique_id: T1548.001
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: linux-workstation-01
+    user: attacker
+    user_id: 1000
+    audit_user_id: 1000
+    terminal: pts0
+    exe: /usr/bin/chmod
+    parent_comm: bash
+    command_line: chmod u+s /tmp/.kworker
+    expect:
+      rules: [linux_audit_suid_chmod]
+      min_alerts: 1
+
+  - id: pkexec_root_shell
+    name: Pkexec spawn root shell
+    description: >
+      Polkit pkexec is used from an interactive terminal to launch a root
+      shell (Abuse Elevation Control Mechanism).
+    technique_id: T1548
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: linux-workstation-01
+    user: attacker
+    user_id: 1000
+    audit_user_id: 1000
+    terminal: pts0
+    exe: /usr/bin/pkexec
+    parent_comm: bash
+    command_line: pkexec /bin/bash
+    expect:
+      rules: [linux_audit_pkexec_shell]
+      min_alerts: 1
+
+  - id: sudoers_nopasswd
+    name: NOPASSWD sudoers drop-in
+    description: >
+      Attacker appends a NOPASSWD rule to /etc/sudoers so future commands
+      run as root without a password prompt.
+    technique_id: T1548.003
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: linux-workstation-01
+    user: attacker
+    user_id: 1000
+    audit_user_id: 1000
+    terminal: pts0
+    exe: /usr/bin/bash
+    parent_comm: bash
+    command_line: >-
+      bash -c 'echo "attacker ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers'
+    expect:
+      rules: [linux_audit_sudoers_modify]
+      min_alerts: 1
+
+  - id: benign_sudo_package_update
+    name: Benign sudo package update
+    description: An operator uses sudo to refresh packages, not to spawn a root shell.
+    technique_id: null
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: linux-workstation-01
+    user: user_01
+    user_id: 1000
+    audit_user_id: 1000
+    terminal: pts0
+    exe: /usr/bin/sudo
+    parent_comm: bash
+    command_line: sudo apt-get update
+    expect:
+      id: benign_linux_sudo_apt
+      rules: []
+      min_alerts: 0
+      max_alerts: 0
+      must_not_match: [linux_audit_sudo_privesc]
+
+  # --- Lateral Movement ---
+
+  - id: ssh_internal_host
+    name: SSH to an internal host
+    description: >
+      From a compromised workstation, the operator SSHes to an RFC1918 host
+      (Remote Services: SSH).
+    technique_id: T1021.004
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: linux-workstation-01
+    user: attacker
+    user_id: 1000
+    audit_user_id: 1000
+    terminal: pts0
+    exe: /usr/bin/ssh
+    parent_comm: bash
+    command_line: >-
+      ssh -o StrictHostKeyChecking=no attacker@10.20.30.40
+    expect:
+      rules: [linux_audit_ssh_lateral]
+      min_alerts: 1
+
+  - id: ssh_stolen_private_key
+    name: SSH with a private key from /tmp
+    description: >
+      Lateral SSH using a private key staged in /tmp rather than the user
+      keyring (Remote Services: SSH).
+    technique_id: T1021.004
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: linux-workstation-01
+    user: attacker
+    user_id: 1000
+    audit_user_id: 1000
+    terminal: pts0
+    exe: /usr/bin/ssh
+    parent_comm: bash
+    command_line: ssh -i /tmp/.id_rsa root@10.20.30.42
+    expect:
+      rules: [linux_audit_ssh_stolen_key]
+      min_alerts: 1
+
+  - id: scp_to_internal_host
+    name: SCP payload to an internal host
+    description: >
+      Attacker copies a payload to another internal host over SSH (Lateral
+      Tool Transfer).
+    technique_id: T1570
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: linux-workstation-01
+    user: attacker
+    user_id: 1000
+    audit_user_id: 1000
+    terminal: pts0
+    exe: /usr/bin/scp
+    parent_comm: bash
+    command_line: >-
+      scp -o StrictHostKeyChecking=no /tmp/payload.sh
+      deploy@10.20.30.41:/tmp/payload.sh
+    expect:
+      rules: [linux_audit_scp_rsync_lateral]
+      min_alerts: 1
+
+  - id: rsync_to_internal_host
+    name: Rsync tools to an internal host
+    description: >
+      Attacker mirrors a tool directory onto a peer over SSH (Lateral Tool
+      Transfer).
+    technique_id: T1570
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: linux-workstation-01
+    user: attacker
+    user_id: 1000
+    audit_user_id: 1000
+    terminal: pts0
+    exe: /usr/bin/rsync
+    parent_comm: bash
+    command_line: rsync -e ssh /tmp/tools/ deploy@10.20.30.43:/tmp/tools/
+    expect:
+      rules: [linux_audit_scp_rsync_lateral]
+      min_alerts: 1
+
+  - id: benign_ssh_to_github
+    name: Benign SSH to GitHub
+    description: Developer SSHes to GitHub, not an internal RFC1918 host.
+    technique_id: null
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: linux-workstation-01
+    user: user_01
+    user_id: 1000
+    audit_user_id: 1000
+    terminal: pts0
+    exe: /usr/bin/ssh
+    parent_comm: bash
+    command_line: ssh git@github.com
+    expect:
+      id: benign_linux_ssh_github
+      rules: []
+      min_alerts: 0
+      max_alerts: 0
+      must_not_match:
+        - linux_audit_ssh_lateral
+        - linux_audit_ssh_stolen_key
+        - linux_audit_ssh_remote_forward
