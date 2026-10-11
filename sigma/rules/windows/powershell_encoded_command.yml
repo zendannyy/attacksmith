@@ -1,5 +1,5 @@
 title: Suspicious Encoded PowerShell Command
-id: win_sysmon_powershell_encoded
+id: fbe4fe92-1f1d-4f24-b218-f35868d3a688
 status: experimental
 description: >
   Detects PowerShell launched with an encoded command from an interactive
