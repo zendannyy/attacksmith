@@ -1,5 +1,5 @@
 title: SSH Lateral Movement to RFC1918 Host
-id: linux_audit_ssh_lateral
+id: 6be8d317-0ffb-4f37-b8a9-d774f02addf7
 status: experimental
 description: Detects interactive SSH to an internal (RFC1918) host. East to West.
 logsource:
