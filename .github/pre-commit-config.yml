@@ -17,3 +17,11 @@ repos:
           - sigma-cli==1.0.6
         args: ["check"]
         files: '^sigma/rules/.*\.(yml|yaml)$'
+
+      - id: gen-uuid
+        name: sigma gen_uuid
+        language: python
+        entry: python3 gen_uuid.py
+        files: '^sigma/rules/.*\.(yml|yaml)$'
+        stages: [pre-commit, pre-push]
+
