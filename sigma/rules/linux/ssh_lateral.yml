@@ -23,7 +23,7 @@ detection:
     process.tty|startswith:
       - pts
       - tty
-  condition: all of selection_*
+  condition: selection_ssh and any of rfc1918 and all of selection_*
 level: high
 tags:
   - attack.lateral_movement
