@@ -24,4 +24,3 @@ repos:
         entry: python3 gen_uuid.py
         files: '^sigma/rules/.*\.(yml|yaml)$'
         stages: [pre-commit, pre-push]
-
