@@ -501,4 +501,3 @@ scenarios:
     expect:
       rules: [linux_audit_python_reverse_pty]
       min_alerts: 1
-

@@ -9,7 +9,7 @@ logsource:
 detection:
   selection_ssh:
     process.name: ssh
-  rfc1918:
+  selection_rfc1918:
     process.command_line|contains:
       - "root@10."
       - "root@192.168."
@@ -23,7 +23,7 @@ detection:
     process.tty|startswith:
       - pts
       - tty
-  condition: selection_ssh and any of rfc1918 and all of selection_*
+  condition: all of selection_*
 level: high
 tags:
   - attack.lateral_movement
