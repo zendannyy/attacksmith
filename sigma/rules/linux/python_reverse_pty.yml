@@ -1,5 +1,5 @@
 title: Python Reverse PTY Shell
-id: linux_audit_python_reverse_pty
+id: ad07d775-d20f-4d30-9178-ad11dc6227fb
 status: experimental
 description: Detects Python launching an in-memory reverse shell with socket connect and pty.spawn.
 logsource:

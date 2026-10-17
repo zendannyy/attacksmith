@@ -1,5 +1,5 @@
-title: Dynamic Linker Hijack via ld.so.preload
-id: linux_audit_ld_preload
+title: Dynamic Linker Hijack ld.so.preload
+id: eb667c77-8c10-4d97-8a4c-2d10e83905a8
 status: experimental
 description: Detects an interactive shell writing a shared object path into /etc/ld.so.preload.
 logsource:
