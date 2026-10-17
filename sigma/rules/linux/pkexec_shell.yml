@@ -1,8 +1,10 @@
 title: Pkexec Root Shell
 id: linux_audit_pkexec_shell
 status: experimental
-description: Detects pkexec launching a shell from an interactive terminal, 
-this utility allows an authorized user to execute a program as another user, typically the root user.
+description: >
+  Detects pkexec launching a shell from an interactive terminal.
+  This lets an authorized user execute a program as another user,
+  typically root.
 logsource:
   product: linux
   service: auditd
