@@ -1,5 +1,5 @@
 title: Windows Disable Task Manager application
-id: win_disable_taskmanager
+id: e3bcf9b8-0539-477d-a26a-ced992aa4a22
 status: experimental
 description: |
   Hunting rule loosely modeled after Atomic Red Team T1112 test "Disable Windows Task Manager application". Correlate before alerting.

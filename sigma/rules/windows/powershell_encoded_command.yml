@@ -7,7 +7,6 @@ description: >
 tags:
   - attack.execution
   - attack.t1059.001
-  - attack.hunting
 logsource:
   product: windows
   service: sysmon
@@ -27,10 +26,10 @@ detection:
       - cmd.exe
       - powershell.exe
       - explorer.exe
-  fields:
+  condition: all of selection_*
+fields:
     - ParentImage
     - Image
     - CommandLine
     - User
-  condition: all of selection_*
 level: medium

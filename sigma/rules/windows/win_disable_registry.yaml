@@ -1,5 +1,5 @@
 title: Windows Disable Registry Tool (T1112)
-id: win_disable_registry
+id: 5c320d54-d014-42ea-b82c-6c89ac914dc4
 status: experimental
 description: |
   Hunting rule loosely based off of Atomic T1112 test "Disable Windows Registry Tool" (Modify Registry) and Agent Tesla reports. Correlate with additional signals before alerting.

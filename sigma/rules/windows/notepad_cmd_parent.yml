@@ -1,5 +1,5 @@
 title: Suspicious Notepad Spawned by Command Shell
-id: win_sysmon_notepad_cmd_parent
+id: f813faad-0e6b-4403-b620-7f384f70efa4
 status: experimental
 description: >
   Detects notepad.exe launched by cmd.exe. Benign notepad is normally started
