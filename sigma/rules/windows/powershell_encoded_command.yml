@@ -28,8 +28,8 @@ detection:
       - explorer.exe
   condition: all of selection_*
 fields:
-    - ParentImage
-    - Image
-    - CommandLine
-    - User
+  - ParentImage
+  - Image
+  - CommandLine
+  - User
 level: medium
