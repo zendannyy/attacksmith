@@ -1,5 +1,5 @@
 title: Bashrc Persistence Hook
-id: linux_audit_bashrc_persistence
+id: 173439fa-73b7-45a4-a47d-c6dab7e8fcca
 status: experimental
 description: Detects appending attacker commands to a shell rc file from an interactive terminal.
 logsource:

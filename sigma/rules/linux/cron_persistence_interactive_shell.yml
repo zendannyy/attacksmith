@@ -1,5 +1,5 @@
 title: Cron Persistence From Interactive Shell
-id: linux_cron_persistence_interactive_shell
+id: 332ab11e-22ef-4a09-9779-b40aac005785
 status: experimental
 description: Detects a shell writing a cron drop-in from an interactive terminal.
 logsource:

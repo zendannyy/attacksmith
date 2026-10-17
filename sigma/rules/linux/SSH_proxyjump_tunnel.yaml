@@ -1,5 +1,5 @@
 title: SSH ProxyJump / ProxyCommand Tunnel
-id: linux_audit_ssh_proxy_tunnel
+id: 1a866dba-d774-4987-acce-9a7244e42d2a
 status: experimental
 description: Detects SSH proxying via ProxyJump, -J, or ProxyCommand from an interactive shell.
 logsource:

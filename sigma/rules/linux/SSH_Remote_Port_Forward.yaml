@@ -1,5 +1,5 @@
 title: SSH Remote Port Forward
-id: linux_audit_ssh_remote_forward
+id: dd0f0aef-e4cb-4088-ae4b-8de3e4951590
 status: experimental
 description: Detects SSH local/remote/dynamic port forwarding from an interactive shell.
 logsource:

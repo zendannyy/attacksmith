@@ -1,5 +1,5 @@
 title: SSH Private Key from Temp Path
-id: linux_audit_ssh_stolen_key
+id: ecdea774-ecf5-4185-8fda-a9b956c3306e
 status: experimental
 description: Detects SSH using an identity file staged under /tmp or /dev/shm.
 logsource:

@@ -1,5 +1,5 @@
 title: Setuid Bit via Chmod
-id: linux_audit_suid_chmod
+id: 22c1d335-5bbb-4bc6-9c32-8207f53db2bb
 status: experimental
 description: Detects chmod enabling the setuid bit on a binary from an interactive shell.
 logsource:

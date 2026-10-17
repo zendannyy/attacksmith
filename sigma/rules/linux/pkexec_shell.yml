@@ -28,5 +28,5 @@ detection:
   condition: all of selection_*
 level: high
 tags:
-  - attack.privilege_escalation
+  - attack.privilege-escalation
   - attack.t1548

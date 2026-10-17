@@ -1,5 +1,5 @@
 title: Socat Reverse Shell C2
-id: linux_audit_socat_reverse_shell
+id: 6963ef0f-a54f-49f9-b310-2e85c57f4c66
 status: experimental
 description: Detects socat used to establish a reverse TCP shell from an interactive terminal.
 logsource:

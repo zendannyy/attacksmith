@@ -1,5 +1,5 @@
 title: Systemd User Timer Persistence
-id: linux_audit_systemd_timer_persistence
+id: a471f07a-580b-4511-904d-7d4f1a987434
 status: experimental
 description: Detects writing a systemd user timer unit from an interactive shell.
 logsource:

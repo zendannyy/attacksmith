@@ -1,5 +1,5 @@
 title: Sudoers NOPASSWD Modification
-id: linux_audit_sudoers_modify
+id: ef5a5b75-6a62-41d8-8e64-6baa064faec1
 status: test
 description: Detects an interactive shell writing a NOPASSWD or ALL=(ALL) rule into /etc/sudoers.
 logsource:

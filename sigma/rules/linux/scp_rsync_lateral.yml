@@ -1,5 +1,5 @@
 title: SCP or Rsync Lateral Tool Transfer
-id: linux_audit_scp_rsync_lateral
+id: d957ba3a-3ccf-4511-9eba-6f16f1c572d2
 status: experimental
 description: Detects scp or rsync copying files to an internal host from an interactive shell.
 logsource:
