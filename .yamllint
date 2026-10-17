@@ -1,0 +1,11 @@
+# https://yamllint.readthedocs.io/en/latest/configuration.html
+extends: default
+
+ignore:
+    - .github/
+
+rules:
+    line-length:
+        max: 120        # a higher limit
+        level: warning  # downgrade from error -> warning
+    new-line-at-end-of-file: enable
