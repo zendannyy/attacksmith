@@ -1,5 +1,5 @@
 title: Pkexec Root Shell
-id: linux_audit_pkexec_shell
+id: 6a3bb033-d4ba-41bb-8998-abb8edaca9b9
 status: experimental
 description: >
   Detects pkexec launching a shell from an interactive terminal.
