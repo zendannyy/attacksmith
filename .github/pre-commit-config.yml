@@ -7,11 +7,18 @@ repos:
       - id: end-of-file-fixer # Ensures files end with a newline
       - id: trailing-whitespace # Trims trailing spaces
 
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        files: '^sigma/rules/.*\.(yml|yaml)$'
+  
   - repo: local
     hooks:
       - id: sigma-cli
         name: sigma-cli validate/convert
         language: python
+        needs: yamllint
         entry: sigma
         additional_dependencies:
           - sigma-cli==1.0.6
