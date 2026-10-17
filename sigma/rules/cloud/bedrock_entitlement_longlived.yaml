@@ -1,5 +1,5 @@
 title: AWS Bedrock Foundation Model Access with Long-Lived Keys
-id: cloudtrail_bedrock_entitlement_longlived
+id: ff2db960-38e1-4c21-ab62-0d82e2c958c8
 status: test
 description: >
   Detects Bedrock foundation-model availability, use-case, agreement, or
